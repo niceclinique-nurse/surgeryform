@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>手術室上刀紀錄系統</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <style>
+    body { background-color: #f0f4f8; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .card { max-width: 100%; margin: 0 auto; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 18px !important; background: #fff; }
+    .field-label-custom { font-weight: bold; margin-bottom: 0.4rem; display: block; color: #2c3e50; font-size: 1.1rem; }
+    .segment-box { background-color: #ffffff; border-left: 6px solid #3273dc; padding: 14px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .input, .select select, .textarea { font-size: 16px !important; height: 2.6em !important; border-radius: 8px; }
+    .textarea { height: auto !important; }
+    .button.is-medium { height: 3rem; font-size: 1.15rem; border-radius: 10px; }
+    hr { margin: 1.2rem 0; background-color: #dbdbdb; height: 1px; }
+    .columns { margin-bottom: 0; }
+    .column { padding-bottom: 0; }
+    #toast { display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#23d160; color:#fff; padding:14px 28px; border-radius:12px; font-size:1rem; font-weight:bold; z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,0.15); }
+    #toast.error { background:#ff3860; }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="card">
+  <h3 class="title is-4 has-text-centered has-text-link mb-4">🩺 手術室紀錄填寫</h3>
+
+  <form id="surgeryForm" onsubmit="submitForm(event)">
+    <div class="columns is-mobile is-multiline">
+      <div class="column is-6">
+        <div class="field">
+          <label class="label is-small">🏢 分院</label>
+          <div class="control"><div class="select is-fullwidth"><select id="branch">
+            <option value="台北">台北</option>
+            <option value="台中">台中</option>
+            <option value="新竹">新竹</option>
+          </select></div></div>
+        </div>
+      </div>
+      <div class="column is-6">
+        <div class="field">
+          <label class="label is-small">⏰ 班別</label>
+          <div class="control"><div class="select is-fullwidth"><select id="shift">
+            <option value="正常班">正常班</option>
+            <option value="加班">加班</option>
+          </select></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field mt-2">
+      <label class="label is-small">📅 手術日期</label>
+      <div class="control"><input class="input" type="date" id="date" required></div>
+    </div>
+
+    <hr>
+
+    <div class="field"><label class="field-label-custom">1. 客戶姓名</label><div class="control"><input class="input" type="text" id="patientName" placeholder="請輸入客戶姓名" required></div></div>
+    <div class="field"><label class="field-label-custom">2. 客戶生日</label><div class="control"><input class="input" type="date" id="birthday"></div></div>
+    <div class="field"><label class="field-label-custom">3. 手術名稱</label><div class="control"><input class="input" type="text" id="surgeryName" placeholder="請輸入手術名稱"></div></div>
+
+    <div class="field">
+      <label class="field-label-custom">4. 手術醫生</label>
+      <div id="doctorsContainer">
+        <div class="select is-fullwidth mb-2">
+          <select class="doctor-select">
+            <option value="">-- 請選擇手術醫生 --</option>
+            <option value="王祚軒">王祚軒</option><option value="鍾卓興">鍾卓興</option>
+            <option value="張伸光">張伸光</option><option value="李宜靜">李宜靜</option>
+            <option value="李兆翔">李兆翔</option><option value="曾世羽">曾世羽</option>
+            <option value="林文成">林文成</option><option value="許耕榕">許耕榕</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="button is-small is-info is-light mt-1" onclick="addDoctorField()">➕ 增加協同手術醫生</button>
+    </div>
+
+    <hr>
+
+    <h4 class="title is-6 has-text-grey mb-2">⏱️ 護理人員上刀時段紀錄</h4>
+    <div id="segmentsContainer">
+      <div class="segment-box">
+        <h5 class="subtitle is-6 font-weight-bold mb-2 has-text-link">時段 #1</h5>
+        <div class="columns is-mobile">
+          <div class="column is-6"><div class="field"><label class="label is-small">5. 上刀時間</label><div class="control"><input class="input startTime" type="time"></div></div></div>
+          <div class="column is-6"><div class="field"><label class="label is-small">6. 下刀時間</label><div class="control"><input class="input endTime" type="time"></div></div></div>
+        </div>
+        <div class="columns is-mobile mt-2">
+          <div class="column is-6"><div class="field"><label class="label is-small">7. 流動</label><div class="control"><div class="select is-fullwidth"><select class="fluidStaff">
+            <option value="">-- 選擇流動 --</option>
+            <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+            <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+            <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+            <option value="祐丞">祐丞</option>
+          </select></div></div></div></div>
+          <div class="column is-6"><div class="field"><label class="label is-small">8. 刷手</label><div class="control"><div class="select is-fullwidth"><select class="scrubStaff">
+            <option value="">-- 選擇刷手 --</option>
+            <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+            <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+            <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+            <option value="祐丞">祐丞</option>
+          </select></div></div></div></div>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="button is-small is-warning is-fullwidth mb-4" onclick="addTimeSegmentField()">➕ 有更換刷手流動，新增下一組時間欄位</button>
+
+    <hr>
+
+    <div class="field"><label class="field-label-custom">9. 備註</label><div class="control"><textarea class="textarea" id="note" rows="2" placeholder="請輸入備註說明..."></textarea></div></div>
+    <div class="field">
+      <label class="field-label-custom">10. 麻醉科</label>
+      <div class="control"><div class="select is-fullwidth"><select id="anesthesia">
+        <option value="">-- 請選擇麻醉設定 --</option>
+        <option value="局麻">局麻</option><option value="麻醫">麻醫</option>
+        <option value="麻姐">麻姐</option><option value="麻醫+麻姐">麻醫+麻姐</option>
+      </select></div></div>
+    </div>
+    <div class="field"><label class="field-label-custom">11. 第一助手</label><div class="control"><input class="input" type="text" id="firstAssistant" placeholder="請填寫第一助手姓名"></div></div>
+    <div class="field"><label class="field-label-custom">12. 學習診</label><div class="control"><input class="input" type="text" id="learningStatus" placeholder="請填寫學習診狀況"></div></div>
+
+    <button type="submit" id="submitBtn" class="button is-link is-fullwidth is-medium mt-5">確認送出整台手術資料</button>
+  </form>
+</div>
+
+<script>
+  // ✅ 你的 Google Apps Script 網址
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyizQWPGpdEiWWO352qlme4m1hBzx4Ah0Smhsemoxacns-1cjli-S0A0fo83CmSd4wm/exec";
+
+  function setDefaultDate() {
+    document.getElementById('date').value = new Date().toISOString().substring(0, 10);
+  }
+  setDefaultDate();
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = isError ? 'error' : '';
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3000);
+  }
+
+  function addDoctorField() {
+    const container = document.getElementById('doctorsContainer');
+    const div = document.createElement('div');
+    div.className = 'select is-fullwidth mb-2';
+    div.innerHTML = `<select class="doctor-select">
+      <option value="">-- 請選擇手術醫生 --</option>
+      <option value="王祚軒">王祚軒</option><option value="鍾卓興">鍾卓興</option>
+      <option value="張伸光">張伸光</option><option value="李宜靜">李宜靜</option>
+      <option value="李兆翔">李兆翔</option><option value="曾世羽">曾世羽</option>
+      <option value="林文成">林文成</option><option value="許耕榕">許耕榕</option>
+    </select>`;
+    container.appendChild(div);
+  }
+
+  let segmentCount = 1;
+
+  function addTimeSegmentField() {
+    segmentCount++;
+    const container = document.getElementById('segmentsContainer');
+    const div = document.createElement('div');
+    div.className = 'segment-box';
+    div.style.borderLeftColor = '#ffdd57';
+    div.innerHTML = `
+      <h5 class="subtitle is-6 font-weight-bold mb-2 has-text-warning-dark">時段 #${segmentCount} (換班紀錄)</h5>
+      <div class="columns is-mobile">
+        <div class="column is-6"><div class="field"><label class="label is-small">5. 上刀時間</label><div class="control"><input class="input startTime" type="time"></div></div></div>
+        <div class="column is-6"><div class="field"><label class="label is-small">6. 下刀時間</label><div class="control"><input class="input endTime" type="time"></div></div></div>
+      </div>
+      <div class="columns is-mobile mt-2">
+        <div class="column is-6"><div class="field"><label class="label is-small">7. 流動</label><div class="control"><div class="select is-fullwidth"><select class="fluidStaff">
+          <option value="">-- 選擇流動 --</option>
+          <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+          <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+          <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+          <option value="祐丞">祐丞</option>
+        </select></div></div></div></div>
+        <div class="column is-6"><div class="field"><label class="label is-small">8. 刷手</label><div class="control"><div class="select is-fullwidth"><select class="scrubStaff">
+          <option value="">-- 選擇刷手 --</option>
+          <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+          <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+          <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+          <option value="祐丞">祐丞</option>
+        </select></div></div></div></div>
+      </div>`;
+    container.appendChild(div);
+  }
+
+  function resetFormFields() {
+    document.getElementById('surgeryForm').reset();
+    setDefaultDate();
+
+    document.getElementById('doctorsContainer').innerHTML = `
+      <div class="select is-fullwidth mb-2">
+        <select class="doctor-select">
+          <option value="">-- 請選擇手術醫生 --</option>
+          <option value="王祚軒">王祚軒</option><option value="鍾卓興">鍾卓興</option>
+          <option value="張伸光">張伸光</option><option value="李宜靜">李宜靜</option>
+          <option value="李兆翔">李兆翔</option><option value="曾世羽">曾世羽</option>
+          <option value="林文成">林文成</option><option value="許耕榕">許耕榕</option>
+        </select>
+      </div>`;
+
+    segmentCount = 1;
+    document.getElementById('segmentsContainer').innerHTML = `
+      <div class="segment-box">
+        <h5 class="subtitle is-6 font-weight-bold mb-2 has-text-link">時段 #1</h5>
+        <div class="columns is-mobile">
+          <div class="column is-6"><div class="field"><label class="label is-small">5. 上刀時間</label><div class="control"><input class="input startTime" type="time"></div></div></div>
+          <div class="column is-6"><div class="field"><label class="label is-small">6. 下刀時間</label><div class="control"><input class="input endTime" type="time"></div></div></div>
+        </div>
+        <div class="columns is-mobile mt-2">
+          <div class="column is-6"><div class="field"><label class="label is-small">7. 流動</label><div class="control"><div class="select is-fullwidth"><select class="fluidStaff">
+            <option value="">-- 選擇流動 --</option>
+            <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+            <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+            <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+            <option value="祐丞">祐丞</option>
+          </select></div></div></div></div>
+          <div class="column is-6"><div class="field"><label class="label is-small">8. 刷手</label><div class="control"><div class="select is-fullwidth"><select class="scrubStaff">
+            <option value="">-- 選擇刷手 --</option>
+            <option value="筱鳳">筱鳳</option><option value="維倫">維倫</option><option value="奕霆">奕霆</option>
+            <option value="美惠">美惠</option><option value="俐伶">俐伶</option><option value="詠晴">詠晴</option>
+            <option value="芷寧">芷寧</option><option value="馨儀">馨儀</option><option value="婉菁">婉菁</option>
+            <option value="祐丞">祐丞</option>
+          </select></div></div></div></div>
+        </div>
+      </div>`;
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+
+    const doctorsArray = [];
+    document.querySelectorAll('.doctor-select').forEach(sel => { if (sel.value) doctorsArray.push(sel.value); });
+
+    const timeSegmentsArray = [];
+    document.querySelectorAll('.segment-box').forEach(box => {
+      timeSegmentsArray.push({
+        startTime: box.querySelector('.startTime').value,
+        endTime: box.querySelector('.endTime').value,
+        fluidStaff: box.querySelector('.fluidStaff').value,
+        scrubStaff: box.querySelector('.scrubStaff').value
+      });
+    });
+
+    const formData = {
+      branch: document.getElementById('branch').value,
+      shift: document.getElementById('shift').value,
+      date: document.getElementById('date').value,
+      patientName: document.getElementById('patientName').value,
+      birthday: document.getElementById('birthday').value,
+      surgeryName: document.getElementById('surgeryName').value,
+      doctors: doctorsArray,
+      timeSegments: timeSegmentsArray,
+      note: document.getElementById('note').value,
+      anesthesia: document.getElementById('anesthesia').value,
+      firstAssistant: document.getElementById('firstAssistant').value,
+      learningStatus: document.getElementById('learningStatus').value
+    };
+
+    try {
+      // ✅ 用 GET + data 參數傳送（解決 CORS 問題）
+      const url = GAS_URL + "?data=" + encodeURIComponent(JSON.stringify(formData));
+      const res = await fetch(url, { method: "GET" });
+      const json = await res.json();
+
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+
+      if (json.status === "ok") {
+        showToast("✅ " + json.message);
+        resetFormFields();
+      } else {
+        showToast("❌ 送出失敗，請重試", true);
+      }
+    } catch (err) {
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+      showToast("❌ 網路錯誤：" + err.message, true);
+    }
+  }
+</script>
+</body>
+</html>
